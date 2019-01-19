@@ -158,12 +158,14 @@ public class PushPresenter extends BasePresenter<PushMvpView> {
         // can make
         String[] permissions = ( StringUtils.isEmpty(permissionAccount) || StringUtils.isEmpty( permissionName))
                             ? null : new String[]{permissionAccount + "@" + permissionName };
-
+        String messageReplaced = message.replaceAll("\\r|\\n","");
+        System.out.println("contract: " + contract);
+        System.out.println("action: " + action);
+        System.out.println("message: " + messageReplaced);
+        System.out.println("permissionAcct: " + permissions[0]);
 
         addDisposable(
-                mDataManager.pushAction(contract, action, message.replaceAll("\\r|\\n","")
-                                , permissions)
-                .mergeWith( jsonObject -> mDataManager.addAccountHistory( getAccountListForHistory( contract, permissionAccount) ))
+                mDataManager.pushActionNoWallet(contract, action, messageReplaced, permissions, "5J8WRSxpL4nx7bm4yrA2CT6i2X8iVckXKnwV29PC4PPS4V2MC9C")
                 .subscribeOn( getSchedulerProvider().io())
                 .observeOn( getSchedulerProvider().ui())
                 .subscribeWith(new RxCallbackWrapper<PushTxnResponse>( this) {

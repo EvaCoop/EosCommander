@@ -48,6 +48,7 @@ public class SignedTransaction extends Transaction {
 
     @Expose
     private List<String> context_free_data = new ArrayList<>();
+    private EosPrivateKey privateKey = null;
 
 
     public SignedTransaction(){
@@ -115,5 +116,18 @@ public class SignedTransaction extends Transaction {
 
         EcSignature signature = EcDsa.sign(getDigestForSignature( chainId ), privateKey);
         this.signatures.add( signature.toString());
+    }
+
+    public void sign(TypeChainId chainId) {
+        if ( null == this.signatures){
+            this.signatures = new ArrayList<>();
+        }
+        System.out.println("privKey! : " + this.privateKey);
+        EcSignature signature = EcDsa.sign(getDigestForSignature( chainId ), this.privateKey);
+        this.signatures.add( signature.toString());
+    }
+
+    public void setPrivKey(String privateKey) {
+        this.privateKey = new EosPrivateKey(privateKey);
     }
 }

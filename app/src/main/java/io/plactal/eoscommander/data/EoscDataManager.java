@@ -167,13 +167,35 @@ public class EoscDataManager {
 
 
     private SignedTransaction createTransaction(String contract, String actionName, String dataAsHex,
-                                                String[] permissions, EosChainInfo chainInfo ){
+                                                String[] permissions, EosChainInfo chainInfo){
         currentBlockInfo = chainInfo;
         Action action = new Action(contract, actionName);
         action.setAuthorization(permissions);
         action.setData( dataAsHex );
 
         SignedTransaction txn = new SignedTransaction();
+        txn.addAction( action );
+        txn.putSignatures( new ArrayList<>());
+
+
+        if ( null != chainInfo ) {
+            txn.setReferenceBlock(chainInfo.getHeadBlockId());
+            txn.setExpiration(chainInfo.getTimeAfterHeadBlockTime(TX_EXPIRATION_IN_MILSEC));
+        }
+
+        return txn;
+    }
+
+    private SignedTransaction createTransactionWithPrivateKey(String contract, String actionName, String dataAsHex,
+                                                String[] permissions, EosChainInfo chainInfo, String privateKey){
+        currentBlockInfo = chainInfo;
+        Action action = new Action(contract, actionName);
+        action.setAuthorization(permissions);
+        action.setData( dataAsHex );
+        System.out.println("createTransactionWithPrivateKey! " + privateKey);
+
+        SignedTransaction txn = new SignedTransaction();
+        txn.setPrivKey(privateKey);
         txn.addAction( action );
         txn.putSignatures( new ArrayList<>());
 
@@ -201,6 +223,11 @@ public class EoscDataManager {
         return txn;
     }
 
+
+    private PackedTransaction signAndPackTransactionNoWallet(SignedTransaction txnBeforeSign) {
+        txnBeforeSign.sign(new TypeChainId(currentBlockInfo.getChain_id()));
+        return new PackedTransaction(txnBeforeSign);
+    }
 
     private Observable<PackedTransaction> signAndPackTransaction(SignedTransaction txnBeforeSign) {
 
@@ -329,6 +356,15 @@ public class EoscDataManager {
                 .flatMap( this::signAndPackTransaction )
                 .flatMap( mNodeosApi::pushTransaction );
     }
+
+    public Observable<PushTxnResponse> pushActionNoWallet(String contract, String action, String data, String[] permissions, String privKey) {
+        return mNodeosApi.jsonToBin( new JsonToBinRequest( contract, action, data ))
+                .flatMap( jsonToBinResp -> getChainInfo()
+                        .map( info -> createTransactionWithPrivateKey( contract, action, jsonToBinResp.getBinargs(), permissions, info, privKey)) )
+                .map( trx -> signAndPackTransactionNoWallet(trx) )
+                .flatMap( mNodeosApi::pushTransaction );
+    }
+
 
 
     public Observable<PushTxnResponse> pushActions(List<Action> actions ){
